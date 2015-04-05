@@ -1,0 +1,10 @@
+#!/bin/bash
+
+source main.sh
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+wordpress_clone $1 $2
