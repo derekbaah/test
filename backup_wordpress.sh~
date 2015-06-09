@@ -2,5 +2,4 @@
 
 source main.sh
 
-
-wordpress_clone $1 $2
+wordpress_backup $1

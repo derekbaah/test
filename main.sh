@@ -5,34 +5,13 @@
 # Copyright (c) 2010 Linode LLC / Christopher S. Aker <caker@linode.com>
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without modification, 
-# are permitted provided that the following conditions are met:
-#
-# * Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
-#
-# * Redistributions in binary form must reproduce the above copyright notice, this
-# list of conditions and the following disclaimer in the documentation and/or
-# other materials provided with the distribution.
-#
-# * Neither the name of Linode LLC nor the names of its contributors may be
-# used to endorse or promote products derived from this software without specific prior
-# written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-# SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
-# TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-# DAMAGE.
+# Adapted by Justice Ogbonna 
 
 
-# We'll need these guys to make our work smooth
-ROOT_PASS="linux55@"
+# Include all vars need for application 
+source credentials.sh
+
+# Ensure we're running as root user
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
   exit
@@ -44,8 +23,7 @@ fi
 
 function system_update {
     apt-get update
-    apt-get -y install aptitude
-    aptitude -y full-upgrade
+    apt-get upgrade
 }
 
 function system_primary_ip {
@@ -539,7 +517,13 @@ function database_clone {
 	fi
 	
 	# clone database
+	# export db 1
+	# copy db1 to db2.sql
+	# replace instances of db1 in db2.sql
+	# import db2.sql into db 2
+
 	mysqldump $SITE_1_DB -uroot -p$ROOT_PASS > $SITE_1_DB".sql";
+
 	mysql -uroot -p$ROOT_PASS -e "CREATE DATABASE $SITE_2_DB";
 	sed -i 's/'$SITE_1'/'$SITE_2'/g' $SITE_1_DB".sql"
 	mysql $SITE_2_DB -uroot -p$ROOT_PASS < $SITE_1_DB".sql";
@@ -559,6 +543,39 @@ function db_from_domain {
 	echo ${SITE_NAME//./_}"DB"
 }
 
+function export_db {
+
+	if [ $# -ne 1 ]; then
+		echo "Database name required"
+		return 14
+	fi
+	
+	DB=$1
+	mysqldump $DB -uroot -p$ROOT_PASS > $DB".sql";
+
+	if [ -f $DB".sql" ]; then
+		echo "Database $DB has been exported"
+	else
+		echo "***Database $DB was not successfully exported"
+		sleep 2
+	fi
+}
+
+#takes a database name as parameter
+#takes a .sql or database export file as second parameter
+#loads export database into named one
+function import_database {
+	
+	if [ $# -ne 2 ]; then
+		echo "Database name and database export file required"
+		return 16
+	fi
+
+	# check if new database exist, dump it in trash and drop it
+
+	# confirm export file exists
+
+}	
 ###########################################################
 # PHP functions
 ###########################################################
@@ -583,6 +600,8 @@ function wordpress_install {
     # installs the latest wordpress tarball from wordpress.org
 
     # $1 - required - The existing virtualhost to install into
+
+	# add relative install path as an option
 
     if [ ! -n "$4" ]; then
         echo "wordpress_install() requires domain name, db name, db user n db pass"
@@ -727,7 +746,7 @@ function add_theme {
 
 function wordpress_clone {
 
-	if [ ! -n "$2" ]; then
+	if [ $# -ne 2 ]; then
         	echo "Source and Desination Domains required"
         	exit;
     	fi
@@ -745,18 +764,23 @@ function wordpress_clone {
 	fi
 
 	if [ -d "$SITE_2_PATH" ]; then
-		echo "Cannot overrite $SITE_2_PATH"
-		exit;
+		echo "$SITE_2 Exists and Will be removed!!!"
+		echo "press ctrl+c to stop...deleting in 10s"
+		sleep 5
+		echo "deleting in 5s"
+		sleep 5
+		echo "removing $SITE_2 contents, db and hostentry"
+		bash ./remove_site.sh $SITE_2
+		echo "Done removing $SITE_2"
 	fi
 	
 	echo -e "\n==== CLONING $SITE_1 TO $SITE_2 ===="
 	sleep 2
 
-	#assumes a domain does not exist
+	#destination domain does not exist
 	add_domain $SITE_2
 	SITE_2_PATH=$(apache_virtualhost_get_siteroot $SITE_2)
-
-	#for existing domain, wipe content and re-add
+	
 
 	# clone database if option supplied
 	database_clone $(db_from_domain $SITE_1) $(db_from_domain $SITE_2)
@@ -788,6 +812,40 @@ function wordpress_clone {
 	#modify live site
 
 }
+
+function wordpress_backup {
+
+	if [ $# -ne 1 ]; then
+        	echo "Source Domain required"
+        	exit;
+    	fi
+
+	SITE_1=$1
+	SITE_1_PATH=$(apache_virtualhost_get_siteroot $SITE_1)
+
+	# check that site 1 exists 
+
+	if [ ! -d "$SITE_1_PATH" ]; then
+		echo "Could not determine DocumentRoot for $SITE_1_PATH"
+		exit;
+	fi
+	
+	cd $SITE_1_PATH	
+	echo "currently directory is $PWD"
+	echo -e "\n==== Backing up $SITE_1 ===="
+	sleep 2
+
+	# create a tar of the public and db dump with time stamp
+	# move it to backup folder
+	export_db $(db_from_domain $SITE_1)
+	tarFile=$SITE_1-$(date +"%s")".tar.gz"
+	echo "tar file is $tarFile"
+	echo "tarring public and db"
+	tar czf $tarFile $(db_from_domain $SITE_1)".sql" public 
+	mv $tarFile ./backup
+
+}
+
 
 
 

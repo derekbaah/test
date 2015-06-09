@@ -539,7 +539,13 @@ function database_clone {
 	fi
 	
 	# clone database
+	# export db 1
+	# copy db1 to db2.sql
+	# replace instances of db1 in db2.sql
+	# import db2.sql into db 2
+
 	mysqldump $SITE_1_DB -uroot -p$ROOT_PASS > $SITE_1_DB".sql";
+
 	mysql -uroot -p$ROOT_PASS -e "CREATE DATABASE $SITE_2_DB";
 	sed -i 's/'$SITE_1'/'$SITE_2'/g' $SITE_1_DB".sql"
 	mysql $SITE_2_DB -uroot -p$ROOT_PASS < $SITE_1_DB".sql";
@@ -559,6 +565,39 @@ function db_from_domain {
 	echo ${SITE_NAME//./_}"DB"
 }
 
+function export_db {
+
+	if [ $# -ne 1 ]; then
+		echo "Database name required"
+		return 14
+	fi
+	
+	DB=$1
+	mysqldump $DB -uroot -p$ROOT_PASS > $DB".sql";
+
+	if [ -f $DB ]; then
+		echo "Database $DB has been exported"
+	else
+		echo "***Database $DB was not successfully exported"
+		sleep 2
+	fi
+}
+
+#takes a database name as parameter
+#takes a .sql or database export file as second parameter
+#loads export database into named one
+function import_database {
+	
+	if [ $# -ne 2 ]; then
+		echo "Database name and database export file required"
+		return 16
+	fi
+
+	# check if new database exist, dump it in trash and drop it
+
+	# confirm export file exists
+
+}	
 ###########################################################
 # PHP functions
 ###########################################################
@@ -583,6 +622,8 @@ function wordpress_install {
     # installs the latest wordpress tarball from wordpress.org
 
     # $1 - required - The existing virtualhost to install into
+
+	# add relative install path as an option
 
     if [ ! -n "$4" ]; then
         echo "wordpress_install() requires domain name, db name, db user n db pass"
@@ -727,7 +768,7 @@ function add_theme {
 
 function wordpress_clone {
 
-	if [ ! -n "$2" ]; then
+	if [ $# -ne 2 ]; then
         	echo "Source and Desination Domains required"
         	exit;
     	fi
@@ -745,18 +786,23 @@ function wordpress_clone {
 	fi
 
 	if [ -d "$SITE_2_PATH" ]; then
-		echo "Cannot overrite $SITE_2_PATH"
-		exit;
+		echo "$SITE_2 Exists and Will be removed!!!"
+		echo "press ctrl+c to stop...deleting in 10s"
+		sleep 5
+		echo "deleting in 5s"
+		sleep 5
+		echo "removing $SITE_2 contents, db and hostentry"
+		bash ./remove_site.sh $SITE_2
+		echo "Done removing $SITE_2"
 	fi
 	
 	echo -e "\n==== CLONING $SITE_1 TO $SITE_2 ===="
 	sleep 2
 
-	#assumes a domain does not exist
+	#destination domain does not exist
 	add_domain $SITE_2
 	SITE_2_PATH=$(apache_virtualhost_get_siteroot $SITE_2)
-
-	#for existing domain, wipe content and re-add
+	
 
 	# clone database if option supplied
 	database_clone $(db_from_domain $SITE_1) $(db_from_domain $SITE_2)
@@ -788,6 +834,40 @@ function wordpress_clone {
 	#modify live site
 
 }
+
+function wordpress_backup {
+
+	if [ $# -ne 1 ]; then
+        	echo "Source Domain required"
+        	exit;
+    	fi
+
+	SITE_1=$1
+	SITE_1_PATH=$(apache_virtualhost_get_siteroot $SITE_1)
+
+	# check that site 1 exists 
+
+	if [ ! -d "$SITE_1_PATH" ]; then
+		echo "Could not determine DocumentRoot for $SITE_1_PATH"
+		exit;
+	fi
+	
+	cd $SITE_1_PATH	
+	echo "currently directory is $PWD"
+	echo -e "\n==== Backing up $SITE_1 ===="
+	sleep 2
+
+	# create a tar of the public and db dump with time stamp
+	# move it to backup folder
+	export_db $(db_from_domain $SITE_1)
+	tarFile=$SITE_1-$(date +"%s")".tar.gz"
+	echo "tar file is $tarFile"
+	echo "tarring public and db"
+	tar czf $tarFile $(db_from_domain $SITE_1)".sql" public 
+	mv $tarFile ./backup
+
+}
+
 
 
 

@@ -3,4 +3,4 @@
 source main.sh
 
 
-wordpress_clone $1 $2
+wordpress_clone_force $1 $2

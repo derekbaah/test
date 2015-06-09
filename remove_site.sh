@@ -11,6 +11,8 @@ fi
 a2dissite $1
 service apache2 reload
 
+#export database first
+
 # drop database 
 drop_db $1
 
