@@ -21,8 +21,6 @@ wordpress_install $SITE_NAME $DB_NAME $SQL_USER $SQL_USER_PASS
 	
 add_essential_plugins $SITE_NAME
 
-add_theme $SITE_NAME "http://justiceo.com/flatsome2.2.3-main.zip"
-add_theme $SITE_NAME "http://justiceo.com/flatsome-child.zip"
 
 add_theme $SITE_NAME "http://justiceo.com/Avada.zip"
 add_theme $SITE_NAME "http://justiceo.com/Avada-Child-Theme.zip"

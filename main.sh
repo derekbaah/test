@@ -744,7 +744,7 @@ function add_theme {
 
 
 
-function wordpress_clone {
+function wordpress_clone_force {
 
 	if [ $# -ne 2 ]; then
         	echo "Source and Desination Domains required"
