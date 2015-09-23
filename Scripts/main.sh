@@ -9,7 +9,7 @@
 
 
 # Include all vars need for application 
-source credentials.sh
+source ../Data/credentials.list
 
 # Ensure we're running as root user
 if [ "$EUID" -ne 0 ]
