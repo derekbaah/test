@@ -12,8 +12,8 @@
 #	2) ADD_IF_NOT_EXISTS (default: true. Adds a new domain to apache)
 #
 
-echo "\nBegin WordPress Install"
-echo "=======================\n"
+echo -e "\nBegin WordPress Install"
+echo -e "=======================\n"
 
 source ../Data/credentials.list
 source main.sh
@@ -47,6 +47,7 @@ SQL_USER_PASS=$(generate_random_pass)
 DB_NAME=${DOMAIN_NAME//./_}"DB"
 
 echo "creating the database..."
+#TODO: check if DB exists (dump it for restore sake, then drop it)
 mysql_create_database $SQL_ROOT_PASS $DB_NAME
 
 echo "creating mysql user..."
@@ -55,13 +56,16 @@ mysql_grant_user $SQL_USER $DB_NAME
 
 ### Installing Wordpress
 echo "installing wordpress..."
+#TODO: check if directory already exists (dump it for restore sake, then rm it)
 wordpress_install $DOMAIN_NAME $DB_NAME $SQL_USER $SQL_USER_PASS
 
 echo "installing themes..."
+#TODO: for speed and efficiency, use a local copy (specified in themes.list)
 add_theme $DOMAIN_NAME "http://justiceo.com/Avada.zip"
 add_theme $DOMAIN_NAME "http://justiceo.com/Avada-Child-Theme.zip"	
 	
 echo "installing plugins..."
+#TODO: for speed and efficiency, use a local copy (specified in themes.list)
 add_essential_plugins $DOMAIN_NAME
 
 echo "adding phpmyadmin shortcut..."
@@ -82,10 +86,16 @@ echo "enabling website..."
 a2ensite $DOMAIN_NAME
 service apache2 reload
 
+echo -e "\nTesting Settings"
+
+echo "Testing MySQL database connection"
+echo "Pinging WordPress instance"
+echo "Pinging PHPmyAdmin"
+
 echo "Success!!!"
 
-echo "\nEnd WordPress Install"
-echo "=====================\n"
+echo -e "\nEnd WordPress Install"
+echo -e "=====================\n"
 
 
 
