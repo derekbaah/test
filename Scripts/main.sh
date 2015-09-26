@@ -261,6 +261,18 @@ function apache_virtualhost_get_docroot {
     fi
 }
 
+function apache_virtualhost_get_conf {
+    if [ ! -n "$1" ]; then
+        echo "apache_virtualhost_get_docroot() requires the hostname as the first argument"
+        exit;
+    fi
+
+    if [ -e /etc/apache2/sites-available/$1".conf" ];
+        then echo /etc/apache2/sites-available/$1".conf"
+    fi
+}
+
+
 function apache_virtualhost_get_siteroot {
     if [ ! -n "$1" ]; then
         echo "apache_virtualhost_get_siteroot() requires the hostname as the first argument"
@@ -616,15 +628,17 @@ function wordpress_install {
 	DB_NAME=$2
 	DB_USER=$3
 	DB_USER_PASS=$4
+	INSTALL_PATH=$DEFAULT_WORDPRESS_INSTALL_PATH"/$1"
+	VPATH = INSTALL_PATH
 
 
-    if [ ! -d "$VPATH" ]; then
+    if [ ! -d "$INSTALL_PATH" ]; then
         echo "Could not determine DocumentRoot for $1"
         exit;
     fi
 
     # download, extract, chown, and get our config file started
-    cd $VPATH
+    cd $INSTALL_PATH
 	echo "==== DOWNLOADING WORDPRESS ===="
 	sleep 1
     wget http://wordpress.org/latest.tar.gz

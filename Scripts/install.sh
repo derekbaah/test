@@ -24,7 +24,7 @@ if [ ! -n "$1" ]; then
 fi
 
 ADD_IF_NOT_EXISTS=true;
-if [ "$2" -eq "false" ]; then
+if [ $2 = false ]; then
 	ADD_IF_NOT_EXISTS=false;
 	exit;
 fi
@@ -35,10 +35,10 @@ echo -e "Installing WordPress for $DOMAIN_NAME...";
 
 ### Create Directories
 echo "creating directories..."
-DOMAIN_PATH="/var/www/$DOMAIN_NAME"
-mkdir -p $DOMAIN_PATH/{log,public,backup}
-touch $DOMAIN_PATH/log/{access.log,error.log}
-touch $DOMAIN_PATH/public/index.html
+INSTALL_PATH=$DEFAULT_WORDPRESS_INSTALL_PATH".$DOMAIN_NAME"
+mkdir -p $INSTALL_PATH/{log,public,backup}
+touch $INSTALL_PATH/log/{access.log,error.log}
+touch $INSTALL_PATH/public/index.html
 
 
 ### Configuring MySQL
@@ -57,34 +57,32 @@ mysql_grant_user $SQL_USER $DB_NAME
 ### Installing Wordpress
 echo "installing wordpress..."
 #TODO: check if directory already exists (dump it for restore sake, then rm it)
+#TODO: expects that domain is already existing, attempts to fetch from apache2. Dependency should be removed
 wordpress_install $DOMAIN_NAME $DB_NAME $SQL_USER $SQL_USER_PASS
 
-echo "installing themes..."
-#TODO: for speed and efficiency, use a local copy (specified in themes.list)
-add_theme $DOMAIN_NAME "http://justiceo.com/Avada.zip"
-add_theme $DOMAIN_NAME "http://justiceo.com/Avada-Child-Theme.zip"	
-	
-echo "installing plugins..."
-#TODO: for speed and efficiency, use a local copy (specified in themes.list)
-add_essential_plugins $DOMAIN_NAME
+### Configure Wordpress Options
+echo "configuring wordpress..."
+configure.sh $DOMAIN_NAME
 
 echo "adding phpmyadmin shortcut..."
-ln -s /usr/share/phpmyadmin $DOMAIN_PATH"/public/"
+ln -s /usr/share/phpmyadmin $INSTALL_PATH"/public/"
 
 echo "setting file permissions..."
-chown www-data:www-data -R $DOMAIN_PATH
+chown www-data:www-data -R $INSTALL_PATH
 
 ### Configuring Apache
 #TODO: ADD_IF_NOT_EXISTS
 echo "configuring apache..."
-APACHE_SAMPLE_CONF="/etc/apache2/sites-available/example.com.conf"
-DOMAIN_CONF="/etc/apache2/sites-available/$DOMAIN_NAME\.conf"
-cp APACHE_SAMPLE_CONF DOMAIN_CONF
-sed -i "s/example.com/$DOMAIN_NAME/g" DOMAIN_CONF
+APACHE_SAMPLE_CONF=$(apache_virtualhost_get_conf example.com)
+DOMAIN_CONF=$(apache_virtualhost_get_conf $DOMAIN_NAME)
+if [ -f $DOMAIN_CONF  || ADD_IF_NOT_EXISTS ]; then
+	cp APACHE_SAMPLE_CONF DOMAIN_CONF
+	sed -i "s/example.com/$DOMAIN_NAME/g" DOMAIN_CONF
 
-echo "enabling website..."
-a2ensite $DOMAIN_NAME
-service apache2 reload
+	echo "enabling website..."
+	a2ensite $DOMAIN_NAME
+	service apache2 reload
+fi
 
 echo -e "\nTesting Settings"
 
