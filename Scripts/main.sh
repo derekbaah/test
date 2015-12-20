@@ -10,6 +10,7 @@
 
 # Include all vars need for application 
 source ../Data/credentials.list
+themesFile=~justice/scripts/Data/themes.list
 
 # Ensure we're running as root user
 if [ "$EUID" -ne 0 ]
@@ -457,7 +458,13 @@ function does_db_exist {
 	echo "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$1'" | mysql -u root -p$ROOT_PASS    	
 
 }
-
+function drop_db_for_site {
+	if [ $# -ne 1 ]; then
+                echo "drop_db requires a database name"
+                exit;
+        fi
+	drop_db $(db_from_domain $1)
+}
 function drop_db {
 
 	if [ $# -ne 1 ]; then
@@ -466,7 +473,7 @@ function drop_db {
     	fi
 
     	
-	DB=$(db_from_domain $1)
+	DB=$1
 
 	# check if database exist
 	if [[ ! -n $(does_db_exist $DB) ]]; then		
@@ -513,7 +520,13 @@ function database_clone {
 	fi
 	if [ -n "$(does_db_exist $SITE_2_DB)" ]; then
 		echo "A database with $SITE_2_DB already exists"
-		exit
+		echo "Deleting in 3 seconds..."
+		sleep 1
+		echo "Deleting in 2 seconds..."
+		sleep 1
+		echo "Deleting in 1 second..."
+		sleep 1
+		drop_db $SITE_2_DB
 	fi
 	
 	# clone database
@@ -717,14 +730,14 @@ function add_theme {
 
 	if [ ! -n "$2" ]; then
         	echo "Domain name and theme download url is required to install plugins"
-        	exit;
+        	return;
     	fi
 
 	VPATH=$(apache_virtualhost_get_docroot $1)
 
 	if [ ! -d "$VPATH" ]; then
 		echo "Could not determine DocumentRoot for $1"
-		exit;
+		return;
 	fi
 
 	cd $VPATH"/wp-content/themes/"

@@ -14,7 +14,7 @@ service apache2 reload
 #export database first
 
 # drop database 
-drop_db $1
+drop_db_for_site $1
 
 # drop db user
 # implement later
@@ -27,8 +27,10 @@ if [ ! -d $DOMAIN_PATH ]; then
 	exit
 fi
 
+echo "== Removing contents =="
 rm -r $DOMAIN_PATH 
 
+echo -e "\n== Done =="
 
 
 

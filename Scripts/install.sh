@@ -61,8 +61,9 @@ wordpress_install $DOMAIN_NAME $DB_NAME $SQL_USER $SQL_USER_PASS
 
 echo "installing themes..."
 #TODO: for speed and efficiency, use a local copy (specified in themes.list)
-add_theme $DOMAIN_NAME "http://justiceo.com/Avada.zip"
-add_theme $DOMAIN_NAME "http://justiceo.com/Avada-Child-Theme.zip"	
+while read theme_path; do
+add_theme $DOMAIN_NAME $theme_path
+done < $themesFile
 	
 echo "installing plugins..."
 #TODO: for speed and efficiency, use a local copy (specified in themes.list)
