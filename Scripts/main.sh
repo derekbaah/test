@@ -11,6 +11,7 @@
 # Include all vars need for application 
 source ../Data/credentials.list
 themesFile=~justice/scripts/Data/themes.list
+pluginsFile=~justice/scripts/Data/plugins.list
 
 # Ensure we're running as root user
 if [ "$EUID" -ne 0 ]
@@ -536,10 +537,10 @@ function database_clone {
 	# import db2.sql into db 2
 
 	mysqldump $SITE_1_DB -uroot -p$ROOT_PASS > $SITE_1_DB".sql";
-
+	cp $SITE_1_DB".sql" $SITE_2_DB".sql";
 	mysql -uroot -p$ROOT_PASS -e "CREATE DATABASE $SITE_2_DB";
-	sed -i 's/'$SITE_1'/'$SITE_2'/g' $SITE_1_DB".sql"
-	mysql $SITE_2_DB -uroot -p$ROOT_PASS < $SITE_1_DB".sql";
+	sed -i 's/'$SITE_1'/'$SITE_2'/g' $SITE_2_DB".sql"
+	mysql $SITE_2_DB -uroot -p$ROOT_PASS < $SITE_2_DB".sql";
 
 	echo -e "==== DATABASE CLONE WAS SUCCESSFUL! ====\n"
 
@@ -564,6 +565,13 @@ function export_db {
 	fi
 	
 	DB=$1
+
+	if [ ! -n "$(does_db_exist $DB)" ]; then
+		echo "Database $DB does not exist";
+		echo "Exiting script...";
+			exit
+	fi
+
 	mysqldump $DB -uroot -p$ROOT_PASS > $DB".sql";
 
 	if [ -f $DB".sql" ]; then
@@ -574,19 +582,60 @@ function export_db {
 	fi
 }
 
+function export_files {
+
+	if [ $# -ne 1 ]; then
+		echo "domain name required"
+		return 15
+	fi
+
+	SITE=$1
+	cd /var/www/
+	echo "currently in: $PWD";
+	tar -czf $SITE".tar.gz" $SITE
+	cd -;
+	mv "/var/www/"$SITE".tar.gz" $SITE".tar.gz"
+	echo "currently in: $PWD";
+}
+
+function import_files {
+	
+	 if [ $# -ne 1 ]; then
+                 echo "domain name required"
+                 return 15
+         fi
+
+         SITE=$1
+         SITE_PATH=$(apache_virtualhost_get_siteroot $SITE);
+         tar -xzvf $SITE".tar.gz" 
+
+}
 #takes a database name as parameter
 #takes a .sql or database export file as second parameter
 #loads export database into named one
 function import_database {
 	
-	if [ $# -ne 2 ]; then
-		echo "Database name and database export file required"
+	if [ $# -ne 1 ]; then
+		echo "Database name required"
 		return 16
 	fi
 
-	# check if new database exist, dump it in trash and drop it
+	DB=$1
 
-	# confirm export file exists
+        if [ -n "$(does_db_exist $DB)" ]; then
+                echo "Database $DB exist and would be removed";
+		echo "Deletingin 5 secs";
+		sleep 5;
+		drop_db $DB;
+        fi
+
+	mysql $DB -uroot -p$ROOT_PASS < $DB".sql";
+
+	if [ -n "$(does_db_exist $DB)" ]; then
+                echo "Database $DB import was successful";
+	else
+		echo "Database $DB import was not successful";
+        fi
 
 }	
 ###########################################################
@@ -706,7 +755,7 @@ function add_plugin {
 
 	if [ ! -d "$VPATH" ]; then
 		echo "Could not determine DocumentRoot for $1"
-		exit;
+		return;
 	fi
 
 	cd $VPATH"/wp-content/plugins/"

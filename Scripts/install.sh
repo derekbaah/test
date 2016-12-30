@@ -67,7 +67,10 @@ done < $themesFile
 	
 echo "installing plugins..."
 #TODO: for speed and efficiency, use a local copy (specified in themes.list)
-add_essential_plugins $DOMAIN_NAME
+#add_essential_plugins $DOMAIN_NAME
+while read plugin_url; do
+add_plugin $DOMAIN_NAME $plugin_url
+done < $pluginsFile
 
 echo "adding phpmyadmin shortcut..."
 ln -s /usr/share/phpmyadmin $DOMAIN_PATH"/public/"
